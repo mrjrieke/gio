@@ -259,6 +259,8 @@ func onTouch(last C.int, view, touchRef C.CFTypeRef, phase C.NSInteger, x, y C.C
 	})
 }
 
+func (w *window) Center() {}
+
 func (w *window) ReadClipboard() {
 	cstr := C.readClipboard()
 	defer C.CFRelease(cstr)

@@ -156,6 +156,13 @@ func NewWindow(options ...Option) *Window {
 	return w
 }
 
+// Center sets the window's location to the center of the screen.
+func (w *Window) Center() {
+	w.driverDefer(func(d driver) {
+		d.Center()
+	})
+}
+
 // Events returns the channel where events are delivered.
 func (w *Window) Events() <-chan event.Event {
 	return w.out

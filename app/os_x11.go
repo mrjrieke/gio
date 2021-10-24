@@ -148,6 +148,19 @@ func (w *x11Window) SetAnimating(anim bool) {
 	w.animating = anim
 }
 
+func (w *x11Window) Center() {
+	screen := C.XDefaultScreen(w.x)
+	screenWidth := C.XDisplayWidth(w.x, screen)
+	screenHeight := C.XDisplayHeight(w.x, screen)
+	var root C.ulong
+	var x, y C.int
+	var width, height, border, depth C.uint
+	C.XGetGeometry(w.x, w.xw, &root, &x, &y, &width, &height, &border, &depth)
+	clientWidth := C.int(width) + C.int(border)
+	clientHeight := C.int(height) + C.int(border)
+	C.XMoveWindow(w.x, w.xw, (screenWidth-clientWidth)/2, (screenHeight-clientHeight)/2)
+}
+
 func (w *x11Window) ReadClipboard() {
 	C.XDeleteProperty(w.x, w.xw, w.atoms.clipboardContent)
 	C.XConvertSelection(w.x, w.atoms.clipboard, w.atoms.utf8string, w.atoms.clipboardContent, w.xw, C.CurrentTime)

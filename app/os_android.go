@@ -1266,6 +1266,8 @@ func newWindow(window *callbacks, options []Option) error {
 	return <-mainWindow.errs
 }
 
+func (w *window) Center() {}
+
 func (w *window) WriteClipboard(s string) {
 	runInJVM(javaVM(), func(env *C.JNIEnv) {
 		jstr := javaString(env, s)

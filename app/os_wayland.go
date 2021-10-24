@@ -937,6 +937,8 @@ func gio_onPointerAxisDiscrete(data unsafe.Pointer, p *C.struct_wl_pointer, axis
 	}
 }
 
+func (w *window) Center() {}
+
 func (w *window) ReadClipboard() {
 	r, err := w.disp.readClipboard()
 	// Send empty responses on unavailable clipboards or errors.

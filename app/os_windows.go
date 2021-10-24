@@ -563,6 +563,20 @@ func (w *window) NewContext() (context, error) {
 	return nil, errors.New("NewContext: no available GPU drivers")
 }
 
+func (w *window) Center() {
+	mi := windows.GetMonitorInfo(w.hwnd)
+	screenWidth := mi.Monitor.Right - mi.Monitor.Left
+	screenHeight := mi.Monitor.Bottom - mi.Monitor.Top
+	var r windows.Rect
+	windows.GetClientRect(w.hwnd, &r)
+	clientWidth := r.Right - r.Left
+	clientHeight := r.Bottom - r.Top
+	windows.SetWindowPos(w.hwnd, 0,
+		(screenWidth-clientWidth)/2, (screenHeight-clientHeight)/2, 0, 0,
+		windows.SWP_NOOWNERZORDER|windows.SWP_NOSIZE,
+	)
+}
+
 func (w *window) ReadClipboard() {
 	w.readClipboard()
 }

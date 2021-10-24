@@ -156,6 +156,10 @@ type driver interface {
 	ShowTextInput(show bool)
 	SetInputHint(mode key.InputHint)
 	NewContext() (context, error)
+
+	// Sets the window's location to the center of the screen.
+	Center()
+
 	// ReadClipboard requests the clipboard content.
 	ReadClipboard()
 	// WriteClipboard requests a clipboard write.

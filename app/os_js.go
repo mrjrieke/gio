@@ -491,6 +491,8 @@ func (w *window) SetAnimating(anim bool) {
 	}
 }
 
+func (w *window) Center() {}
+
 func (w *window) ReadClipboard() {
 	if w.clipboard.IsUndefined() {
 		return

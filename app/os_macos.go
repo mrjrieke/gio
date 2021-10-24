@@ -98,6 +98,11 @@ static NSWindowStyleMask getWindowStyleMask(CFTypeRef windowRef) {
 	return [window styleMask];
 }
 
+static void center(CFTypeRef windowRef) {
+	NSWindow* window = (__bridge NSWindow *)windowRef;
+	[window center];
+}
+
 static void closeWindow(CFTypeRef windowRef) {
 	NSWindow* window = (__bridge NSWindow *)windowRef;
 	[window performClose:nil];
@@ -252,6 +257,10 @@ func insertView(view C.CFTypeRef, w *window) {
 
 func (w *window) contextView() C.CFTypeRef {
 	return w.view
+}
+
+func (w *window) Center() {
+	C.center(w.window)
 }
 
 func (w *window) ReadClipboard() {
