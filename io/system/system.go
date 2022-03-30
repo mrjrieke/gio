@@ -33,6 +33,10 @@ type FrameEvent struct {
 	Queue event.Queue
 }
 
+type PositionEvent struct {
+	X, Y int
+}
+
 // DestroyEvent is the last event sent through
 // a window event channel.
 type DestroyEvent struct {
@@ -94,6 +98,7 @@ func (l Stage) String() string {
 }
 
 func (FrameEvent) ImplementsEvent()    {}
+func (PositionEvent) ImplementsEvent() {}
 func (StageEvent) ImplementsEvent()    {}
 func (*CommandEvent) ImplementsEvent() {}
 func (DestroyEvent) ImplementsEvent()  {}

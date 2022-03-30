@@ -158,7 +158,13 @@ func (w *x11Window) Center() {
 	C.XGetGeometry(w.x, w.xw, &root, &x, &y, &width, &height, &border, &depth)
 	clientWidth := C.int(width) + C.int(border)
 	clientHeight := C.int(height) + C.int(border)
-	C.XMoveWindow(w.x, w.xw, (screenWidth-clientWidth)/2, (screenHeight-clientHeight)/2)
+	posX := (screenWidth - clientWidth) / 2
+	posY := (screenHeight - clientHeight) / 2
+	C.XMoveWindow(w.x, w.xw, posX, posY)
+
+	//	var attrs C.XWindowAttributes
+	//	C.XGetWindowAttributes(w.x, w.xw, &attrs)
+	w.w.Event(system.PositionEvent{X: int(posX), Y: int(posY)})
 }
 
 func (w *x11Window) ReadClipboard() {
@@ -258,6 +264,9 @@ func (w *x11Window) Configure(options []Option) {
 			y := (int(height) - sz.Y) / 2
 
 			C.XMoveResizeWindow(w.x, w.xw, C.int(x), C.int(y), C.uint(sz.X), C.uint(sz.Y))
+
+			C.XGetWindowAttributes(w.x, w.xw, &attrs)
+			w.w.Event(system.PositionEvent{X: int(attrs.x), Y: int(attrs.y)})
 		}
 	}
 	if cnf.Decorated != prev.Decorated {
