@@ -265,8 +265,7 @@ func (w *x11Window) Configure(options []Option) {
 
 			C.XMoveResizeWindow(w.x, w.xw, C.int(x), C.int(y), C.uint(sz.X), C.uint(sz.Y))
 
-			C.XGetWindowAttributes(w.x, w.xw, &attrs)
-			w.w.Event(system.PositionEvent{X: int(attrs.x), Y: int(attrs.y)})
+			w.w.Event(system.PositionEvent{X: x, Y: y})
 		}
 	}
 	if cnf.Decorated != prev.Decorated {
