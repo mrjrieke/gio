@@ -162,9 +162,10 @@ func (w *x11Window) Center() {
 	posY := (screenHeight - clientHeight) / 2
 	C.XMoveWindow(w.x, w.xw, posX, posY)
 
-	//	var attrs C.XWindowAttributes
-	//	C.XGetWindowAttributes(w.x, w.xw, &attrs)
-	w.w.Event(system.PositionEvent{X: int(posX), Y: int(posY), Width: int(clientWidth), Height: int(clientHeight)})
+	var attrs C.XWindowAttributes
+	C.XGetWindowAttributes(w.x, w.xw, &attrs)
+
+	w.w.Event(system.PositionEvent{X: int(posX), Y: int(posY), YOffset: int(attrs.y), Width: int(clientWidth), Height: int(clientHeight)})
 }
 
 func (w *x11Window) ReadClipboard() {
@@ -635,7 +636,7 @@ func (h *x11EventHandler) handleEvents() bool {
 		case C.ConfigureNotify: // window configuration change
 			cevt := (*C.XConfigureEvent)(unsafe.Pointer(xev))
 			pos := image.Pt(int(cevt.x), int(cevt.y))
-			sz := image.Pt(int(cevt.width), int(cevt.height))
+			sz := image.Pt(int(cevt.width+cevt.border_width), int(cevt.height+cevt.border_width))
 			if sz != w.config.Size || pos != w.config.Position {
 				w.config.Position = pos
 				w.config.Size = sz

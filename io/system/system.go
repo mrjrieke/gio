@@ -34,7 +34,7 @@ type FrameEvent struct {
 }
 
 type PositionEvent struct {
-	X, Y, Width, Height int
+	X, Y, Width, Height, YOffset int
 }
 
 // DestroyEvent is the last event sent through
