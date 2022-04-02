@@ -21,6 +21,8 @@ var errOutOfDate = errors.New("app: GPU surface out of date")
 
 // Config describes a Window configuration.
 type Config struct {
+	// Position of the window (Xpos, Ypos)
+	Position image.Point
 	// Size is the window dimensions (Width, Height).
 	Size image.Point
 	// MaxSize is the window maximum allowed dimensions.

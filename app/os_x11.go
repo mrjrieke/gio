@@ -164,7 +164,7 @@ func (w *x11Window) Center() {
 
 	//	var attrs C.XWindowAttributes
 	//	C.XGetWindowAttributes(w.x, w.xw, &attrs)
-	w.w.Event(system.PositionEvent{X: int(posX), Y: int(posY)})
+	w.w.Event(system.PositionEvent{X: int(posX), Y: int(posY), Width: int(clientWidth), Height: int(clientHeight)})
 }
 
 func (w *x11Window) ReadClipboard() {
@@ -265,7 +265,7 @@ func (w *x11Window) Configure(options []Option) {
 
 			C.XMoveResizeWindow(w.x, w.xw, C.int(x), C.int(y), C.uint(sz.X), C.uint(sz.Y))
 
-			w.w.Event(system.PositionEvent{X: x, Y: y})
+			w.w.Event(system.PositionEvent{X: x, Y: y, Width: int(width), Height: int(height)})
 		}
 	}
 	if cnf.Decorated != prev.Decorated {
@@ -634,7 +634,10 @@ func (h *x11EventHandler) handleEvents() bool {
 			w.w.Event(key.FocusEvent{Focus: false})
 		case C.ConfigureNotify: // window configuration change
 			cevt := (*C.XConfigureEvent)(unsafe.Pointer(xev))
-			if sz := image.Pt(int(cevt.width), int(cevt.height)); sz != w.config.Size {
+			pos := image.Pt(int(cevt.x), int(cevt.y))
+			sz := image.Pt(int(cevt.width), int(cevt.height))
+			if sz != w.config.Size || pos != w.config.Position {
+				w.config.Position = pos
 				w.config.Size = sz
 				w.w.Event(ConfigEvent{Config: w.config})
 			}
