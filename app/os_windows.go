@@ -645,7 +645,7 @@ func (w *window) Configure(options []Option) {
 		y := wr.Top
 		dx := r.Right - r.Left
 		dy := r.Bottom - r.Top
-		if w.config.center {
+		if w.config.Center {
 			// Calculate center position on current monitor.
 			mi := windows.GetMonitorInfo(w.hwnd).Monitor
 			x = (mi.Right - mi.Left - dx) / 2

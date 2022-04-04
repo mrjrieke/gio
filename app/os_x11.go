@@ -250,7 +250,7 @@ func (w *x11Window) Configure(options []Option) {
 		if shints.flags != 0 {
 			C.XSetWMNormalHints(w.x, w.xw, &shints)
 		}
-		if cnf.center {
+		if cnf.Center {
 			screen := C.XDefaultScreen(w.x)
 			width := C.XDisplayWidth(w.x, screen)
 			height := C.XDisplayHeight(w.x, screen)
@@ -796,7 +796,7 @@ func newX11Window(gioWin *callbacks, options []Option) error {
 		xkb:          xkb,
 		xkbEventBase: xkbEventBase,
 		wakeups:      make(chan struct{}, 1),
-		config:       Config{Size: cnf.Size},
+		config:       Config{Size: cnf.Size, Center: cnf.Center},
 	}
 	w.notify.read = pipe[0]
 	w.notify.write = pipe[1]

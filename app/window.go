@@ -940,7 +940,7 @@ func (w *Window) Perform(actions system.Action) {
 				options = append(options,
 					func(m unit.Metric, cnf *Config) {
 						// Set the flag so the driver can later do the actual centering.
-						cnf.center = true
+						cnf.Center = true
 					})
 			case system.ActionClose:
 				w.closing = true
