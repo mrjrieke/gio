@@ -86,6 +86,7 @@ tasks:
  - test_android: |
      cd gio
      CC=$ANDROID_SDK_ROOT/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang GOOS=android GOARCH=arm64 CGO_ENABLED=1 go build ./...
+     CC=$ANDROID_SDK_ROOT/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi29-clang GOOS=android GOARCH=arm CGO_ENABLED=1 go build ./...
  - install_gogio: |
      cd gio/cmd
      go install ./gogio

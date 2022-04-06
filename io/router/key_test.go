@@ -7,8 +7,10 @@ import (
 	"reflect"
 	"testing"
 
+	"gioui.org/f32"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
 	"gioui.org/op"
 	"gioui.org/op/clip"
 )
@@ -227,27 +229,6 @@ func TestNoOps(t *testing.T) {
 	r.Frame(nil)
 }
 
-func TestTabFocus(t *testing.T) {
-	handlers := make([]int, 3)
-	ops := new(op.Ops)
-	r := new(Router)
-
-	for i := range handlers {
-		key.InputOp{Tag: &handlers[i]}.Add(ops)
-	}
-	r.Frame(ops)
-
-	tab := func(mod key.Modifiers) {
-		r.Queue(
-			key.Event{Name: key.NameTab, State: key.Press, Modifiers: mod},
-			key.Event{Name: key.NameTab, State: key.Release, Modifiers: mod},
-		)
-	}
-	tab(0)
-	tab(key.ModShift)
-	assertFocus(t, r, &handlers[2])
-}
-
 func TestDirectionalFocus(t *testing.T) {
 	ops := new(op.Ops)
 	r := new(Router)
@@ -281,6 +262,58 @@ func TestDirectionalFocus(t *testing.T) {
 	assertFocus(t, r, &handlers[3])
 	r.MoveFocus(FocusUp)
 	assertFocus(t, r, &handlers[0])
+
+	r.MoveFocus(FocusForward)
+	assertFocus(t, r, &handlers[1])
+	r.MoveFocus(FocusBackward)
+	assertFocus(t, r, &handlers[0])
+}
+
+func TestFocusScroll(t *testing.T) {
+	ops := new(op.Ops)
+	r := new(Router)
+	h := new(int)
+
+	parent := clip.Rect(image.Rect(1, 1, 14, 39)).Push(ops)
+	cl := clip.Rect(image.Rect(10, -20, 20, 30)).Push(ops)
+	key.InputOp{Tag: h}.Add(ops)
+	pointer.InputOp{
+		Tag:          h,
+		Types:        pointer.Scroll,
+		ScrollBounds: image.Rect(-100, -100, 100, 100),
+	}.Add(ops)
+	cl.Pop()
+	parent.Pop()
+	r.Frame(ops)
+
+	r.MoveFocus(FocusLeft)
+	r.RevealFocus(image.Rect(0, 0, 15, 40))
+	evts := r.Events(h)
+	assertScrollEvent(t, evts[len(evts)-1], f32.Pt(6, -9))
+}
+
+func TestFocusClick(t *testing.T) {
+	ops := new(op.Ops)
+	r := new(Router)
+	h := new(int)
+
+	cl := clip.Rect(image.Rect(0, 0, 10, 10)).Push(ops)
+	key.InputOp{Tag: h}.Add(ops)
+	pointer.InputOp{
+		Tag:   h,
+		Types: pointer.Press | pointer.Release,
+	}.Add(ops)
+	cl.Pop()
+	r.Frame(ops)
+
+	r.MoveFocus(FocusLeft)
+	r.ClickFocus()
+	assertEventPointerTypeSequence(t, r.Events(h), pointer.Cancel, pointer.Press, pointer.Release)
+}
+
+func TestNoFocus(t *testing.T) {
+	r := new(Router)
+	r.MoveFocus(FocusForward)
 }
 
 func assertKeyEvent(t *testing.T, events []event.Event, expected bool, expectedInputs ...event.Event) {
