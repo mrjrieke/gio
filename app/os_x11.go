@@ -266,11 +266,23 @@ func (w *x11Window) Configure(options []Option) {
 
 			C.XMoveResizeWindow(w.x, w.xw, C.int(x), C.int(y), C.uint(sz.X), C.uint(sz.Y))
 
-			w.w.Event(system.PositionEvent{X: x, Y: y, Width: int(width), Height: int(height)})
+			cnf.Position = image.Point{x, y}
+			if attrs.y > 0 {
+				cnf.YOffset = int(attrs.y)
+			}
 		}
 	}
 	if cnf.Decorated != prev.Decorated {
 		w.config.Decorated = cnf.Decorated
+	}
+	if cnf.Center != prev.Center {
+		w.config.Center = cnf.Center
+	}
+	if cnf.Position != prev.Position {
+		w.config.Position = cnf.Position
+	}
+	if cnf.YOffset != prev.YOffset {
+		w.config.YOffset = cnf.YOffset
 	}
 	if w.config != prev {
 		w.w.Event(ConfigEvent{Config: w.config})
