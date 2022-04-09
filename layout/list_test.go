@@ -25,6 +25,24 @@ func TestEmptyList(t *testing.T) {
 	}
 }
 
+func TestListScrollToEnd(t *testing.T) {
+	l := List{
+		ScrollToEnd: true,
+	}
+	gtx := Context{
+		Ops:         new(op.Ops),
+		Constraints: Exact(image.Pt(20, 10)),
+	}
+	l.Layout(gtx, 1, func(gtx Context, idx int) Dimensions {
+		return Dimensions{
+			Size: image.Pt(10, 10),
+		}
+	})
+	if want, got := -10, l.Position.Offset; want != got {
+		t.Errorf("got offset %d, want %d", got, want)
+	}
+}
+
 func TestListPosition(t *testing.T) {
 	_s := func(e ...event.Event) []event.Event { return e }
 	r := new(router.Router)
@@ -138,5 +156,23 @@ func TestListPosition(t *testing.T) {
 				t.Errorf("List: invalid last visible offset: got %v; want %v", got, want)
 			}
 		})
+	}
+}
+
+func TestExtraChildren(t *testing.T) {
+	var l List
+	l.Position.First = 1
+	gtx := Context{
+		Ops:         new(op.Ops),
+		Constraints: Exact(image.Pt(10, 10)),
+	}
+	count := 0
+	const all = 3
+	l.Layout(gtx, all, func(gtx Context, idx int) Dimensions {
+		count++
+		return Dimensions{Size: image.Pt(10, 10)}
+	})
+	if count != all {
+		t.Errorf("laid out %d of %d children", count, all)
 	}
 }

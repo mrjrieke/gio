@@ -25,6 +25,7 @@ import (
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/clip"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -67,6 +68,10 @@ type Window struct {
 	hasNextFrame bool
 	nextFrame    time.Time
 	delayedDraw  *time.Timer
+	// viewport is the latest frame size with insets applied.
+	viewport image.Rectangle
+	// metric is the metric from the most recent frame.
+	metric unit.Metric
 
 	queue       queue
 	cursor      pointer.Cursor
@@ -505,9 +510,32 @@ func (c *callbacks) SetEditorSnippet(r key.Range) {
 }
 
 func (c *callbacks) MoveFocus(dir router.FocusDirection) {
-	c.w.queue.q.MoveFocus(dir)
-	c.w.setNextFrame(time.Time{})
-	c.w.updateAnimation(c.d)
+	c.w.moveFocus(dir, c.d)
+}
+
+func (w *Window) moveFocus(dir router.FocusDirection, d driver) {
+	if w.queue.q.MoveFocus(dir) {
+		w.queue.q.RevealFocus(w.viewport)
+	} else {
+		var v image.Point
+		switch dir {
+		case router.FocusRight:
+			v = image.Pt(+1, 0)
+		case router.FocusLeft:
+			v = image.Pt(-1, 0)
+		case router.FocusDown:
+			v = image.Pt(0, +1)
+		case router.FocusUp:
+			v = image.Pt(0, -1)
+		default:
+			return
+		}
+		const scrollABit = 50
+		dist := v.Mul(w.metric.Px(unit.Dp(scrollABit)))
+		w.queue.q.ScrollFocus(dist)
+	}
+	w.setNextFrame(time.Time{})
+	w.updateAnimation(d)
 }
 
 func (c *callbacks) ClickFocus() {
@@ -748,6 +776,7 @@ func (w *Window) processEvent(d driver, e event.Event) {
 			// No drawing if not visible.
 			break
 		}
+		w.metric = e2.Metric
 		var frameStart time.Time
 		if w.queue.q.Profiling() {
 			frameStart = time.Now()
@@ -759,11 +788,28 @@ func (w *Window) processEvent(d driver, e event.Event) {
 		// Prepare the decorations and update the frame insets.
 		wrapper := &w.decorations.Ops
 		wrapper.Reset()
+		viewport := image.Rectangle{
+			Min: image.Point{
+				X: e2.Metric.Px(e2.Insets.Left),
+				Y: e2.Metric.Px(e2.Insets.Top),
+			},
+			Max: image.Point{
+				X: e2.Size.X - e2.Metric.Px(e2.Insets.Right),
+				Y: e2.Size.Y - e2.Metric.Px(e2.Insets.Bottom),
+			},
+		}
+		// Scroll to focus if viewport is shrinking in any dimension.
+		if old, new := w.viewport.Size(), viewport.Size(); new.X < old.X || new.Y < old.Y {
+			w.queue.q.RevealFocus(viewport)
+		}
+		w.viewport = viewport
 		size := e2.Size // save the initial window size as the decorations will change it.
 		e2.FrameEvent.Size = w.decorate(d, e2.FrameEvent, wrapper)
 		w.out <- e2.FrameEvent
 		frame, gotFrame := w.waitFrame(d)
+		cl := clip.Rect(image.Rectangle{Max: e2.FrameEvent.Size}).Push(wrapper)
 		ops.AddCall(&wrapper.Internal, &frame.Internal, ops.PC{}, ops.PCFor(&frame.Internal))
+		cl.Pop()
 		err := w.validateAndProcess(d, size, e2.Sync, wrapper)
 		if gotFrame {
 			// We're done with frame, let the client continue.
@@ -800,12 +846,18 @@ func (w *Window) processEvent(d driver, e event.Event) {
 		e2.Config.Size = e2.Config.Size.Sub(w.decorations.size)
 		w.out <- e2
 	case event.Event:
-		if w.queue.q.Queue(e2) {
+		// Convert tab or shift+tab presses to focus moves.
+		if e, ok := e.(key.Event); ok && e.State == key.Press && e.Name == key.NameTab && e.Modifiers&^key.ModShift == 0 {
+			dir := router.FocusForward
+			if e.Modifiers.Contain(key.ModShift) {
+				dir = router.FocusBackward
+			}
+			w.moveFocus(dir, d)
+		} else if w.queue.q.Queue(e2) {
 			w.setNextFrame(time.Time{})
 			w.updateAnimation(d)
 		}
 		w.updateCursor(d)
-		w.out <- e
 	}
 }
 

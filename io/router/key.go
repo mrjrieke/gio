@@ -3,7 +3,7 @@
 package router
 
 import (
-	"math"
+	"image"
 	"sort"
 
 	"gioui.org/f32"
@@ -54,7 +54,8 @@ type keyCollector struct {
 type dirFocusEntry struct {
 	tag    event.Tag
 	row    int
-	bounds f32.Rectangle
+	area   int
+	bounds image.Rectangle
 }
 
 const (
@@ -70,6 +71,8 @@ const (
 	FocusLeft
 	FocusUp
 	FocusDown
+	FocusForward
+	FocusBackward
 )
 
 // InputState returns the last text input state as
@@ -148,7 +151,7 @@ func (q *keyQueue) updateFocusLayout() {
 		end := 1
 		for ; end < len(order); end++ {
 			h := &order[end]
-			center := (h.bounds.Min.Y + h.bounds.Max.Y) * .5
+			center := (h.bounds.Min.Y + h.bounds.Max.Y) / 2
 			if center > bottom {
 				break
 			}
@@ -166,13 +169,36 @@ func (q *keyQueue) updateFocusLayout() {
 	}
 }
 
-func (q *keyQueue) MoveFocus(dir FocusDirection, events *handlerEvents) {
+// MoveFocus attempts to move the focus in the direction of dir, returning true if it succeeds.
+func (q *keyQueue) MoveFocus(dir FocusDirection, events *handlerEvents) bool {
+	if len(q.dirOrder) == 0 {
+		return false
+	}
 	order := 0
 	if q.focus != nil {
 		order = q.handlers[q.focus].dirOrder
 	}
 	focus := q.dirOrder[order]
 	switch dir {
+	case FocusForward, FocusBackward:
+		if len(q.order) == 0 {
+			break
+		}
+		order := 0
+		if dir == FocusBackward {
+			order = -1
+		}
+		if q.focus != nil {
+			order = q.handlers[q.focus].order
+			if dir == FocusForward {
+				order++
+			} else {
+				order--
+			}
+		}
+		order = (order + len(q.order)) % len(q.order)
+		q.setFocus(q.order[order], events)
+		return true
 	case FocusRight, FocusLeft:
 		next := order
 		if q.focus != nil {
@@ -185,6 +211,7 @@ func (q *keyQueue) MoveFocus(dir FocusDirection, events *handlerEvents) {
 			newFocus := q.dirOrder[next]
 			if newFocus.row == focus.row {
 				q.setFocus(newFocus.tag, events)
+				return true
 			}
 		}
 	case FocusUp, FocusDown:
@@ -197,14 +224,14 @@ func (q *keyQueue) MoveFocus(dir FocusDirection, events *handlerEvents) {
 			nextRow = focus.row + delta
 		}
 		var closest event.Tag
-		dist := float32(math.Inf(+1))
-		center := (focus.bounds.Min.X + focus.bounds.Max.X) * .5
+		dist := int(1e6)
+		center := (focus.bounds.Min.X + focus.bounds.Max.X) / 2
 	loop:
 		for 0 <= order && order < len(q.dirOrder) {
 			next := q.dirOrder[order]
 			switch next.row {
 			case nextRow:
-				nextCenter := (next.bounds.Min.X + next.bounds.Max.X) * .5
+				nextCenter := (next.bounds.Min.X + next.bounds.Max.X) / 2
 				d := center - nextCenter
 				if d < 0 {
 					d = -d
@@ -221,41 +248,26 @@ func (q *keyQueue) MoveFocus(dir FocusDirection, events *handlerEvents) {
 		}
 		if closest != nil {
 			q.setFocus(closest, events)
+			return true
 		}
 	}
+	return false
 }
 
 func (q *keyQueue) Push(e event.Event, events *handlerEvents) {
-	// Convert tab or shift+tab presses to focus moves.
-	if e, ok := e.(key.Event); ok && e.Name == key.NameTab && e.Modifiers&^key.ModShift == 0 {
-		if e.State == key.Release || len(q.order) == 0 {
-			return
-		}
-		forward := !e.Modifiers.Contain(key.ModShift)
-		order := 0
-		if !forward {
-			order = -1
-		}
-		if q.focus != nil {
-			order = q.handlers[q.focus].order
-			if forward {
-				order++
-			} else {
-				order--
-			}
-		}
-		order = (order + len(q.order)) % len(q.order)
-		q.setFocus(q.order[order], events)
-		return
-	}
 	if q.focus != nil {
 		events.Add(q.focus, e)
 	}
 }
 
-func (q *keyQueue) BoundsFor(t event.Tag) f32.Rectangle {
+func (q *keyQueue) BoundsFor(t event.Tag) image.Rectangle {
 	order := q.handlers[t].dirOrder
 	return q.dirOrder[order].bounds
+}
+
+func (q *keyQueue) AreaFor(t event.Tag) int {
+	order := q.handlers[t].dirOrder
+	return q.dirOrder[order].area
 }
 
 func (q *keyQueue) setFocus(focus event.Tag, events *handlerEvents) {
@@ -293,7 +305,7 @@ func (k *keyCollector) softKeyboard(show bool) {
 	}
 }
 
-func (k *keyCollector) handlerFor(tag event.Tag, bounds f32.Rectangle) *keyHandler {
+func (k *keyCollector) handlerFor(tag event.Tag, area int, bounds image.Rectangle) *keyHandler {
 	h, ok := k.q.handlers[tag]
 	if !ok {
 		h = &keyHandler{new: true, order: -1}
@@ -302,13 +314,13 @@ func (k *keyCollector) handlerFor(tag event.Tag, bounds f32.Rectangle) *keyHandl
 	if h.order == -1 {
 		h.order = len(k.q.order)
 		k.q.order = append(k.q.order, tag)
-		k.q.dirOrder = append(k.q.dirOrder, dirFocusEntry{tag: tag, bounds: bounds})
+		k.q.dirOrder = append(k.q.dirOrder, dirFocusEntry{tag: tag, area: area, bounds: bounds})
 	}
 	return h
 }
 
-func (k *keyCollector) inputOp(op key.InputOp, bounds f32.Rectangle) {
-	h := k.handlerFor(op.Tag, bounds)
+func (k *keyCollector) inputOp(op key.InputOp, area int, bounds image.Rectangle) {
+	h := k.handlerFor(op.Tag, area, bounds)
 	h.visible = true
 	h.hint = op.Hint
 }
